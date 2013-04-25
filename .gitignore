@@ -1,0 +1,10 @@
+*#logger.*
+logger.*
+!logger.org*
+*.o
+*.so
+*.rds
+.#*
+#*
+*#
+*~

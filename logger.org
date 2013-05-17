@@ -1,7 +1,7 @@
 #+TITLE:     logger.org
-#+AUTHOR:    Charles C. Berry    
-#+EMAIL:     cberry@tajo.ucsd.edu
-#+DATE:      2010-12-08 Thur
+#+AUTHOR:    Rainer M Krug
+#+EMAIL:     Rainer@krugs.de
+#+DATE:      2013-05-17 
 #+DESCRIPTION: R Package Development Helpers
 #+KEYWORDS: 
 
@@ -156,6 +156,7 @@ Complete version info
   .git
   ^.*\\.org$
   ^logger.
+  .logger.
   .gitignore
   library
   version
@@ -163,24 +164,6 @@ Complete version info
 #+end_src
 
 
-
-* Package description
-#+begin_src R :eval nil :tangle ./logger-package.R :shebang :padline no :no-expand :comments no
-  ##' Very simple logger
-  ##' 
-  ##' \tabular{ll}{
-  ##' Package: \tab logger\cr
-  ##' Type: \tab Package\cr
-  ##' Version: \tab MAJORVERSION.MINORVERSION.PATCHVERSION\cr
-  ##' Date: \tab TODAYSDATE\cr
-  ##' License: \tab GPL (>= 2)\cr
-  ##' LazyLoad: \tab yes\cr
-  ##' }
-  ##'
-  ##' @docType package
-  ##' @author Rainer M Krug \email{Rainer@@krugs.de}
-  NULL
-#+end_src
 
 * Package Files
 ** DESCRIPTION
@@ -220,200 +203,456 @@ Complete version info
 
 * R directory (./R)
 
-
 ** logging (./logging.R)
 :PROPERTIES:
-:tangle:   ./R/logging.R
 :comments: yes
 :no-expand: TRUE
 :END:
 *** define logging environment
-#+begin_src R 
+:PROPERTIES:
+:tangle: ./R/aaa.R
+:END:
+#+begin_src R
   .logData <- new.env()
-  assign(".logHeaderLevel", 0, envir = .logData)
-  assign(".logHeader", "", envir = .logData)
-  assign(".logHeaderClock", "", envir = .logData)
+  ##
+  assign("loggingThreshold", 10, envir = .logData)
+  assign("logToFile", FALSE, envir = .logData)
+  assign("logFileName", NULL, envir = .logData)
+
+  assign("logToConsole", TRUE, envir = .logData)
+  ##
+  assign("logHeaderLevel", 0, envir = .logData)
+  assign("logHeader", "", envir = .logData)
+  assign("logHeaderClock", "", envir = .logData)
+  assign("timeFormat", "", envir = .logData)
 #+end_src
-*** logtime
+
+*** getLoggingThreshold
+:PROPERTIES:
+:tangle: ./R/getterAndSetter.R
+:END:
 #+begin_src R 
-  logTime <- function(format) {
-    return(as.character(Sys.time()))
+  ##' getter for logging threshold
+  ##'
+  ##' getter function for logging threshold.
+  ##' Maximum header level which will be logged, default value is 10.
+  ##' @return integer value for the logging threshold
+  ##' @author Dr Rainer M Krug
+  ##' @export
+  getLoggingThreshold <- function() {
+    return( get("loggingThreshold", envir = .logData) )
   }
 #+end_src
-*** getHeaderLevel
+*** setLoggingThreshold
+:PROPERTIES:
+:tangle: ./R/getterAndSetter.R
+:END:
 #+begin_src R 
+  ##' Set logging threshold
+  ##'
+  ##' Set logging threshold to new value
+  ##' @author Dr Rainer M Krug
+  ##' @export
+  ##' @param newLoggingThreshold the new logging threshold to be used.
+  ##'   default value: 10
+  ##' @return the old logging threshold used
+  setLoggingThreshold <- function(newLoggingThreshold = 10) {
+    oldLoggingThreshold <- get("loggingThreshold", envir = .logData)
+    assign("loggingThreshold", newLoggingThreshold, envir = .logData)
+    invisible( oldLoggingThreshold )
+  }
+#+end_src
+
+*** getLogFileName
+:PROPERTIES:
+:tangle: ./R/getterAndSetter.R
+:END:
+#+begin_src R 
+  ##' getter for logFileName
+  ##'
+  ##' getter function for log file name
+  ##' Name of log file
+  ##' @return integer value for the logging threshold
+  ##' @author Dr Rainer M Krug
+  ##' @export
+  getLogFileName <- function() {
+    return( get("logFileName", envir = .logData) )
+  }
+#+end_src
+*** setLogFileName
+:PROPERTIES:
+:tangle: ./R/getterAndSetter.R
+:END:
+#+begin_src R 
+  ##' Set log file name
+  ##'
+  ##' Set log file name
+  ##' If the name is null (default), logging to file will be disabled.
+  ##' @author Dr Rainer M Krug
+  ##' @export
+  ##' @param newLogFileName the new log file name to be used
+  ##'   default value: 10
+  ##' @return the old logging threshold used
+  setLogFileName <- function(newLogFileName = NULL) {
+    oldLogFileName <- get("logFileName", envir = .logData)
+    assign("logFileName", newLogFileName, envir = .logData)
+    if (is.null(newLogFileName)) {
+        assign("logToFile", FALSE, envir = .logData)
+    }
+    invisible( oldLogFileName )
+  }
+#+end_src
+
+*** getLogToFile
+:PROPERTIES:
+:tangle: ./R/getterAndSetter.R
+:END:
+#+begin_src R 
+  ##' getter for logToFile
+  ##'
+  ##' getter function for logToFile
+  ##' TRUE if logging to getLogFileName(), otherwise FALSE
+  ##' @return logical, TRUE if logging to file, otherwise FALSE
+  ##' @author Dr Rainer M Krug
+  ##' @export
+  getLogToFile <- function() {
+    return( get("logToFile", envir = .logData) )
+  }
+#+end_src
+*** setLogToFile
+:PROPERTIES:
+:tangle: ./R/getterAndSetter.R
+:END:
+#+begin_src R 
+  ##' Set logToFile
+  ##'
+  ##' Set logToFile
+  ##' If logFileName is NULL, this value can not be set to TRUE and will issue a warning 
+  ##' @author Dr Rainer M Krug
+  ##' @export
+  ##' @param newValue logical, TRUE if logs should be written to LogFileName, FALSE if not
+  ##'   default value: FALSE
+  ##' @return the old value of logToFile
+  setLogToFile<- function( newValue ) {
+      oldValue <- get("logToFile", envir = .logData)
+      if (is.null(getLogFileName()) & newValue) {
+          warning("can not set logToFile to TRUE if logFileName==NULL!\n\nlogToFile set to FALSE!")
+          assign("logToFile", FALSE, envir = .logData)
+      } else {
+          assign("logToFile", newValue, envir = .logData)
+      }
+      invisible( oldValue )
+  }
+#+end_src
+
+
+*** getLogToConsole
+:PROPERTIES:
+:tangle: ./R/getterAndSetter.R
+:END:
+#+begin_src R 
+  ##' getter for logToConsole
+  ##'
+  ##' getter function for logToConsole
+  ##' @return logical, TRUE if logging to console, otherwise FALSE
+  ##' @author Dr Rainer M Krug
+  ##' @export
+  getLogToConsole <- function() {
+    return( get("logToConsole", envir = .logData) )
+  }
+#+end_src
+*** setLogToConsole
+:PROPERTIES:
+:tangle: ./R/getterAndSetter.R
+:END:
+#+begin_src R 
+  ##' Set logToConsole
+  ##'
+  ##' Set logToConsole
+  ##' 
+  ##' @author Dr Rainer M Krug
+  ##' @export
+  ##' @param newValue logical, TRUE if logs should be written to console, FALSE if not
+  ##'   default value: FALSE
+  ##' @return the old value of logToConsole
+  setLogToConsole <- function(newValue = NULL) {
+    oldValue <- get("logToConsole", envir = .logData)
+    assign("logToConsole", newValue, envir = .logData)
+    invisible( oldValue )
+  }
+#+end_src
+
+
+*** getHeaderLevel
+:PROPERTIES:
+:tangle: ./R/getterAndSetter.R
+:END:
+#+begin_src R 
+  ##' getter for header level
+  ##'
+  ##' getter function for header level
+  ##' @title getterAndSetter
+  ##' @return integer value for the header level
+  ##' @author Dr Rainer M Krug
+  ##' @export
   getHeaderLevel <- function() {
-    return( get(".logHeaderLevel", envir = .logData) )
+    return( get("logHeaderLevel", envir = .logData) )
   }
 #+end_src
 *** getHeader
+:PROPERTIES:
+:tangle: ./R/getterAndSetter.R
+:END:
 #+begin_src R 
+  ##' getter for the last header used
+  ##'
+  ##' getter function for last header
+  ##' @return character string containing last header
+  ##' @author Dr Rainer M Krug
+  ##' @export
   getHeader <- function() {
-    return( get(".logHeader", envir = .logData)[getHeaderLevel()] )
+    return( get("logHeader", envir = .logData)[getHeaderLevel()] )
   }
 #+end_src
 *** getHeaderClock
+:PROPERTIES:
+:tangle: ./R/getterAndSetter.R
+:END:
 #+begin_src R 
+  ##' getter function for time last header
+  ##'
+  ##' getter function for the time when the last header was logged
+  ##' @return character string for the last header time
+  ##' @author Dr Rainer M Krug
+  ##' @export
   getHeaderClock <- function() {
-    return( get(".logHeaderClock", envir = .logData)[getHeaderLevel()] )
+    return( get("logHeaderClock", envir = .logData)[getHeaderLevel()] )
   }
 #+end_src
-*** incHeaderLevel
+*** setTimeFormat
+:PROPERTIES:
+:tangle: ./R/getterAndSetter.R
+:END:
 #+begin_src R 
-    incHeaderLevel <- function(header, clock) {
-      nl <- getHeaderLevel() + 1
-      nh <- c(get(".logHeader", envir = .logData), header)
-      nc <- c(get(".logHeaderClock", envir = .logData), clock)
-      assign(".logHeaderLevel", nl, envir = .logData)
-      assign(".logHeader", nh, envir = .logData)
-      assign(".logHeaderClock", nc, envir = .logData)
-      return( nl )
-    }
+  ##' Set time format
+  ##'
+  ##' Set time format which will be used to formate the timestamps
+  ##' @param newFormat new timeformat to be used. See ?strptime for details of the format 
+  ##' @return the old format string used
+  ##' @author Dr Rainer M Krug
+  ##' @export
+  setTimeFormat <- function(newFormat) {
+    oldFormat <- get("timeFormat", envir = .logData)
+    assign("timeFormat", newFormat, envir = .logData)
+    invisible( oldFormat )
+  }
 #+end_src
 
-*** decHeaderLevel
+
+*** .incHeaderLevel
+:PROPERTIES:
+:tangle: ./R/incHeaderLevel.R
+:END:
 #+begin_src R 
-  decHeaderLevel <- function() {
+  ##' Increment header level
+  ##'
+  ##' Increases the header level by one, using the given header and clock time
+  ##' @title incHeaderLevel
+  ##' @param header character string, Header of the new header level
+  ##' @param clock character string, containing the timestamp
+  ##' @return  integer value for the the new header level
+  ##' @author Dr Rainer M Krug
+  .incHeaderLevel <- function(header, clock) {
+    nl <- getHeaderLevel() + 1
+    nh <- c(get("logHeader", envir = .logData), header)
+    nc <- c(get("logHeaderClock", envir = .logData), clock)
+    assign("logHeaderLevel", nl, envir = .logData)
+    assign("logHeader", nh, envir = .logData)
+    assign("logHeaderClock", nc, envir = .logData)
+    invisible( nl )
+  }
+#+end_src
+
+*** .decHeaderLevel
+:PROPERTIES:
+:tangle: ./R/decHeaderLevel.R
+:END:
+#+begin_src R 
+  ##' decreases the header level
+  ##'
+  ##' decreases the header level.
+  ##' @title decHeaderLevel
+  ##' @return integer value for the new header level
+  ##' @author Dr Rainer M Krug
+  .decHeaderLevel <- function() {
     ol <- getHeaderLevel()
     if (ol == 0) {
       nl <- 0
     } else {
       nl <- ol - 1
-      assign(".logHeaderLevel", nl,                                             envir = .logData)
-      assign(".logHeader",      get(".logHeader", envir = .logData)[1:nl],      envir = .logData)
-      assign(".logHeaderClock", get(".logHeaderClock", envir = .logData)[1:nl], envir = .logData)
+      assign("logHeaderLevel", nl,                                             envir = .logData)
+      assign("logHeader",      get("logHeader", envir = .logData)[1:nl],      envir = .logData)
+      assign("logHeaderClock", get("logHeaderClock", envir = .logData)[1:nl], envir = .logData)
     }
     if (nl==0) {
-      assign(".logHeader", NULL, envir=.logData)
-      assign(".logHeaderClock", NULL, envir=.logData)
+      assign("logHeader", NULL, envir=.logData)
+      assign("logHeaderClock", NULL, envir=.logData)
     }
-    return( nl )
+    invisible( nl )
   }
 #+end_src
 
+*** logtime
+:PROPERTIES:
+:tangle: ./R/logtime.R
+:END:
+#+begin_src R 
+  ##' Format function for time
+  ##'
+  ##' Used to have a consistent format for the time.
+  ##' @title logtime
+  ##' @return character vector of Sys.time()
+  ##' @author Dr Rainer M Krug
+  ##' @export
+  logTime <- function() {
+    return(format(Sys.time(),  get("timeFormat", envir = .logData)))
+  }
+#+end_src
 *** newLogFile
+:PROPERTIES:
+:tangle: ./R/newLogFile.R
+:END:
 #+begin_src R
   ##' Create empty logfile and mark it as org file
   ##'
-  ##' .. content for \details{} ..
-  ##' @title 
-  ##' @param parameter 
-  ##' @return 
+  ##' Creates a new empty log file with one initial line defining it as an org-mode file,
+  ##' i.e. when opened with org-mode in emacs, it is formated to provide folding et al.
+  ##' An existing file with the same name will be deleted!
+  ##' The variable logFileName will be set and logging to file will be enabled.
+  ##' @title newLogFile
+  ##' @param logFileName character, the neme including path for the new logfile.
+  ##' @return character value of the old log file name
   ##' @author Rainer M Krug
-  newLogFile <- function( parameter ) {
-    if (!is.null(parameter$logFile)) {
-      unlink( parameter$logFile )
-      file.create( parameter$logFile )
+  ##' @export
+  newLogFile <- function( logFileName ) {
+      unlink( logFileName )
+      file.create( logFileName )
       cat(
-        "#    -*- mode: org -*-\n",
-        file = parameter$logFile,
-        append = TRUE
-        )
-      assign(".logHeaderLevel", 0, envir = .logData)
-      assign(".logHeader", NULL, envir = .logData)
-      assign(".logHeaderClock", NULL, envir = .logData)
-    }
+          "#    -*- mode: org -*-\n",
+          file = logFileName,
+          append = TRUE
+          )
+      oldLogFileName <- getLogFileName()
+      setLogFileName( logFileName )
+      ## assign("logHeaderLevel", 0, envir = .logData)
+      ## assign("logHeader", NULL, envir = .logData)
+      ## assign("logHeaderClock", NULL, envir = .logData)
+      invisible(oldLogFileName)
   }
 #+end_src
 
 *** logBegin
+:PROPERTIES:
+:tangle: ./R/logBegin.R
+:END:
 #+begin_src R
   ##' log as org mode compatible format
   ##'
-  ##' .. content for \details{} ..
-  ##' @title 
-  ##' @param simObject 
-  ##' @param logToConsole 
-  ##' @param logToFile 
-  ##' @param ... 
-  ##' @return 
+  ##' Logging in org mode compatible format
+  ##' @title logBegin
+  ##' @param ... values which will be concatenated using paste(..., collapse=" ")
+  ##'   to the message to be logged.
+  ##' @return invisible returns new header level
   ##' @author Rainer M Krug
-  logBegin <- function( parameter, ...) {
-    hc <- logTime()
-    hl <- incHeaderLevel(paste(..., collapse=" "), clock=hc)
-    if (hl <= parameter$loggingThreshold) {
-      msg <- paste0(
-        paste0(rep("*", (hl*2-1)), collapse=""), " ", "[", hc, "] ", getHeader(), " BEGIN", "\n"
-        )
-    if (parameter$logToFile) {
-      cat(
-        msg,
-        file = parameter$logFile,
-        append = TRUE
-        )
-    }
-    if (parameter$logToConsole) {
-      cat("\n", msg, "\n")
-    }
-  }
+  ##' @export
+  logBegin <- function( ... ) {
+      hc <- logTime()
+      hl <- .incHeaderLevel(paste(..., collapse=" "), clock=hc)
+      if (hl <= getLoggingThreshold()) {
+          msg <- paste0(
+              paste0(rep("*", (hl*2-1)), collapse=""), " ", "[", hc, "] ", getHeader(), " BEGIN", "\n"
+              )
+          if (getLogToFile()) {
+              cat(
+                  msg,
+                  file = getLogFileName(),
+                  append = TRUE
+                  )
+          }
+          if (getLogToConsole()) {
+              cat("\n", msg, "\n")
+          }
+      }
+      invisible(hl)
   }
 #+end_src
 
 *** logEnd
+:PROPERTIES:
+:tangle: ./R/logEnd.R
+:END:
 #+begin_src R
-  ##' log as org mode compatible format
+  ##' Ends logging header
   ##'
-  ##' .. content for \details{} ..
-  ##' @title 
-  ##' @param simObject 
-  ##' @param logToConsole 
-  ##' @param logToFile 
-  ##' @param ... 
-  ##' @return 
+  ##' Ends logging header and writes timestanps of begin time and end time
+  ##' @title logEnd
+  ##' @return invisible returns the new header level
   ##' @author Rainer M Krug
-  logEnd <- function( parameter ) {
+  ##' @export
+  logEnd <- function( ) {
     hc <- logTime()
     hl <- getHeaderLevel()
-    if (hl <= parameter$loggingThreshold) {
+    if (hl <= getLoggingThreshold()) {
       msg <- paste0(
         paste0(rep("*", (hl*2-1)), collapse=""), " [", hc, "] ", getHeader(), " END", "\n",
         "CLOCK: [", getHeaderClock(), "]--[", hc, "]\n"
-        ## paste0(rep("*", (hl*2)), collapse=""), " [", hc, "] ", "END", "\n",
         )
-      if (parameter$logToFile) {
+      if (getLogToFile()) {
         cat(
           msg,
-          file = parameter$logFile,
+          file = getLogFileName(),
           append = TRUE
           )
       }
-      if (parameter$logToConsole) {
+      if (getLogToConsole()) {
         cat("\n", msg, "\n")
       }
     }
-    decHeaderLevel()
+    invisible( .decHeaderLevel() )
   }
 #+end_src
 
 *** logList
+:PROPERTIES:
+:tangle: ./R/logEnd.R
+:END:
 #+begin_src R
-  ##' log as org mode compatible format
+  ##' log an entry without changing the header level
   ##'
-  ##' .. content for \details{} ..
-  ##' @title 
-  ##' @param simObject 
-  ##' @param logToConsole 
-  ##' @param logToFile 
-  ##' @param ... 
-  ##' @return 
+  ##' Log a message in the actual logging level.
+  ##' @title logList
+  ##' @param ... values which will be concatenated using paste(..., collapse=" ")
+  ##'   to the message to be logged.
   ##' @author Rainer M Krug
-  logList <- function( parameter, ...) {
+  ##' @export
+  logList <- function( ... ) {
     hl <- getHeaderLevel()
-    if (hl <= parameter$loggingThreshold) {
+    if (hl <= getLoggingThreshold()) {
       msg <- paste0(
         paste0(rep("*", (hl*2)), collapse=""), " [", logTime(), "] ", paste( ..., collapse=" " ), "\n"
         )
-      if (parameter$logToFile) {
+      if (getLogToFile()) {
         cat(
           msg,
-          file = parameter$logFile,
+          file = getLogFileName(),
           append = TRUE
           )
       }
-      if (parameter$logToConsole) {
+      if (getLogToConsole()) {
         cat("\n", msg, "\n")
       }
     }
+    invisible(NULL)
   }
 #+end_src
 
@@ -570,9 +809,6 @@ for details
   R CMD INSTALL $rckopts pkg
 #+end_src
 
-#+results:
-: g++ -I/usr/share/R/include   -I"/home/rkrug/R/i486-pc-linux-gnu-library/2.13/Rcpp/include"   -fpic  -O3 -pipe  -g -c windDispCpp.cpp -o windDispCpp.o
-: g++ -shared -o logger.so windDispCpp.o -L/home/rkrug/R/i486-pc-linux-gnu-library/2.13/Rcpp/lib -lRcpp -Wl,-rpath,/home/rkrug/R/i486-pc-linux-gnu-library/2.13/Rcpp/lib -L/usr/lib/R/lib -lR
 
 
 ** build package

@@ -1,6 +1,7 @@
 .git
 ^.*\\.org$
 ^logger.
+.logger.
 .gitignore
 library
 version

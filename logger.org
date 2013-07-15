@@ -103,6 +103,8 @@ Org-babel support for building
   rm -f ./postTangleScript.sh
 #+end_src
 
+#+RESULTS:
+
 
 * gitignore file (./.gitignore)
 :PROPERTIES:
@@ -175,16 +177,16 @@ Complete version info
 :comments: no
 :END:
 #+begin_src fundamental
-  Package: logger
-  Type: Package
-  Title: Very Simple Logger
-  Version: MAJORVERSION.MINORVERSION-PATCHVERSION
-  Date: TODAYSDATE
-  Author: Rainer M. Krug
-  Maintainer: Rainer M Krug <Rainer@krugs.de>
-  Description: Simple loging without dependencies
-  License: GPL-3
-  LazyLoad: yes
+Package: logger
+Type: Package
+Title: Very Simple Logger
+Version: MAJORVERSION.MINORVERSION-PATCHVERSION
+Date: TODAYSDATE
+Author: Rainer M. Krug
+Maintainer: Rainer M Krug <Rainer@krugs.de>
+Description: Simple loging without dependencies
+License: GPL-3
+LazyLoad: yes
 #+end_src
 
 ** NAMESPACE
@@ -226,6 +228,10 @@ Complete version info
   assign("logHeader", "", envir = .logData)
   assign("logHeaderClock", "", envir = .logData)
   assign("timeFormat", "", envir = .logData)
+
+.onAttach <- function(...) {
+    ThisIsATest <<- 99
+    }
 #+end_src
 
 *** getLoggingThreshold

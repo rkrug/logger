@@ -1,13 +1,10 @@
-  *#logger.*
-  logger.*
-  !logger.org*
-  *.o
-  *.so
-  *.rds
-  .#*
-  #*
-  *#
-  *~
-/logger.org~
-/.Rhistory
-/README
+*#logger.*
+logger.*
+!logger.org*
+*.o
+*.so
+*.rds
+.#*
+#*
+*#
+*~

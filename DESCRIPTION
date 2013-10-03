@@ -1,20 +1,10 @@
 Package: logger
 Type: Package
 Title: Very Simple Logger
-Version: 0.0-1
-Date: 2013-10-03_11-40
+Version: 0.1-1
+Date: 2013-10-03_11-48
 Author: Rainer M. Krug
 Maintainer: Rainer M Krug <Rainer@krugs.de>
 Description: Simple loging without dependencies
 License: GPL-3
 LazyLoad: yes
-Collate:
-    'aaa.R'
-    'decHeaderLevel.R'
-    'getterAndSetter.R'
-    'incHeaderLevel.R'
-    'logBegin.R'
-    'logEnd.R'
-    'logtime.R'
-    'newLogFile.R'
-    'package.R'
